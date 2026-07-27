@@ -12,6 +12,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [riskFlags, setRiskFlags] = useState<Record<string, RiskFlag>>({});
   const [analyzing, setAnalyzing] = useState(false);
+  const [needsReauth, setNeedsReauth] = useState(false);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -22,7 +23,9 @@ export default function Home() {
     fetch("/api/emails")
       .then((res) => res.json())
       .then((data) => {
-        if (data.error) {
+        if (data.reauth) {
+          setNeedsReauth(true);
+        } else if (data.error) {
           setError(data.error);
         } else {
           setMessages(data.messages);
@@ -59,6 +62,29 @@ export default function Home() {
 
   if (status === "loading") {
     return <Centered>Loading…</Centered>;
+  }
+
+  // Google access lapsed and couldn't be renewed silently — most likely the
+  // refresh token expired (Google caps these at 7 days while the OAuth app is
+  // still in "Testing"). Ask for a fresh grant rather than showing an error.
+  if (needsReauth) {
+    return (
+      <Centered>
+        <div className="max-w-sm text-center space-y-6 px-6">
+          <h1 className="font-serif text-3xl text-stone-800">Sparks AI</h1>
+          <p className="text-stone-500 text-sm leading-relaxed">
+            Your Google access has expired. Reconnect to keep reading your
+            wedding inbox.
+          </p>
+          <button
+            onClick={() => signIn("google")}
+            className="w-full rounded-full bg-stone-800 text-white py-3 text-sm tracking-wide hover:bg-stone-700 transition-colors"
+          >
+            Reconnect Google account
+          </button>
+        </div>
+      </Centered>
+    );
   }
 
   if (status !== "authenticated") {
