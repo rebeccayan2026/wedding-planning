@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import type { GmailMessageSummary } from "@/lib/gmail";
-import type { RiskFlag } from "@/lib/ai";
+import type { Insight } from "@/lib/ai";
 import { senderName, relativeTime, exactTime } from "@/lib/format";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -13,32 +13,39 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function RiskBadge({ risk }: { risk: RiskFlag["risk"] }) {
+/**
+ * The urgency signal. Shows the deadline the message actually stated when
+ * there is one — a real date is far more actionable than the word "high".
+ */
+function UrgencyChip({ insight }: { insight: Insight }) {
+  const label =
+    insight.deadline ?? (insight.risk === "high" ? "Urgent" : "This week");
+
   const styles =
-    risk === "high"
+    insight.risk === "high"
       ? "bg-red-50 text-red-700 ring-red-100"
       : "bg-amber-50 text-amber-800 ring-amber-100";
 
   return (
     <span
-      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium capitalize ring-1 ring-inset ${styles}`}
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${styles}`}
     >
-      {risk}
+      {label}
     </span>
   );
 }
 
 export function AttentionCard({
   message,
-  flag,
+  insight,
 }: {
   message: GmailMessageSummary;
-  flag: RiskFlag;
+  insight: Insight;
 }) {
   return (
     <li className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-card sm:p-4">
       <div className="flex items-center gap-2">
-        <RiskBadge risk={flag.risk} />
+        <UrgencyChip insight={insight} />
         <span className="min-w-0 truncate text-[13px] text-neutral-600">
           {senderName(message.from)}
         </span>
@@ -50,13 +57,14 @@ export function AttentionCard({
         </time>
       </div>
 
+      {/* The action leads, not the subject — the point is what to do next. */}
       <p className="mt-2 text-[15px] font-medium leading-snug text-neutral-900">
-        {message.subject}
+        {insight.action || message.subject}
       </p>
 
-      {flag.reason && (
-        <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-500">
-          {flag.reason}
+      {insight.action && (
+        <p className="mt-1 truncate text-xs text-neutral-400">
+          {message.subject}
         </p>
       )}
     </li>
@@ -105,17 +113,12 @@ export function InboxSkeleton() {
           </div>
         ))}
       </div>
-      <div className="mt-10 space-y-4">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-3 w-full rounded bg-neutral-100" />
-        ))}
-      </div>
     </div>
   );
 }
 
 /** Placeholder for the attention section while the model is still deciding,
- *  so the list doesn't visibly reshuffle when the flags land. */
+ *  so the list doesn't visibly reshuffle when the verdicts land. */
 export function AttentionSkeleton() {
   return (
     <div className="mt-6 animate-pulse space-y-2.5">

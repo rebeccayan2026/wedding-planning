@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { analyzeInboxRisk, type RiskFlag } from "@/lib/ai";
+import { analyzeInbox, type Insight } from "@/lib/ai";
 import { supabase } from "@/lib/supabase";
 import { getOrCreatePlanner } from "@/lib/planner";
 import type { GmailMessageSummary } from "@/lib/gmail";
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     const { data: cached, error: cacheError } = await supabase
       .from("email_risk_flags")
-      .select("gmail_message_id, risk, reason")
+      .select("gmail_message_id, risk, category, action, deadline")
       .eq("planner_id", plannerId)
       .in(
         "gmail_message_id",
@@ -37,20 +37,22 @@ export async function POST(request: Request) {
     const cachedIds = new Set((cached ?? []).map((c) => c.gmail_message_id));
     const uncached = messages.filter((m) => !cachedIds.has(m.id));
 
-    const freshFlags = await analyzeInboxRisk(uncached);
+    const fresh = await analyzeInbox(uncached);
 
-    if (freshFlags.length > 0) {
-      const rows = freshFlags.map((f) => {
-        const message = messages.find((m) => m.id === f.id)!;
+    if (fresh.length > 0) {
+      const rows = fresh.map((insight) => {
+        const message = messages.find((m) => m.id === insight.id)!;
         return {
           planner_id: plannerId,
-          gmail_message_id: f.id,
+          gmail_message_id: insight.id,
           subject: message.subject,
           from_address: message.from,
           snippet: message.snippet,
           date: message.date,
-          risk: f.risk,
-          reason: f.reason,
+          risk: insight.risk,
+          category: insight.category,
+          action: insight.action,
+          deadline: insight.deadline,
         };
       });
 
@@ -60,21 +62,23 @@ export async function POST(request: Request) {
       if (insertError) throw insertError;
     }
 
-    const flags: RiskFlag[] = [
+    const insights: Insight[] = [
       ...(cached ?? []).map(
         (c) =>
           ({
             id: c.gmail_message_id,
             risk: c.risk,
-            reason: c.reason,
-          }) as RiskFlag
+            category: c.category ?? "other",
+            action: c.action ?? "",
+            deadline: c.deadline,
+          }) as Insight
       ),
-      ...freshFlags,
+      ...fresh,
     ];
 
-    return NextResponse.json({ flags });
+    return NextResponse.json({ insights });
   } catch (err) {
-    console.error("Failed to analyze inbox risk:", err);
+    console.error("Failed to analyze inbox:", err);
     return NextResponse.json(
       { error: "Couldn't analyze your inbox right now." },
       { status: 500 }

@@ -13,12 +13,22 @@ const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
  * Uses `format=metadata` so we only pull headers + snippet, not full
  * bodies — cheaper and enough for a first "what's in my inbox" view.
  */
+/**
+ * Lean on Gmail's own categorisation to drop the obvious noise before it ever
+ * reaches the model: marketing blasts and social notifications are never work.
+ * `updates` is deliberately kept — receipts and booking confirmations from
+ * vendors often land there.
+ */
+const INBOX_QUERY = "in:inbox -category:promotions -category:social";
+
 export async function fetchRecentMessages(
   accessToken: string,
-  maxResults = 15
+  maxResults = 25
 ): Promise<GmailMessageSummary[]> {
   const listRes = await fetch(
-    `${GMAIL_API_BASE}/messages?maxResults=${maxResults}&q=in:inbox`,
+    `${GMAIL_API_BASE}/messages?maxResults=${maxResults}&q=${encodeURIComponent(
+      INBOX_QUERY
+    )}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
