@@ -1,9 +1,18 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useEffect, useMemo, useState } from "react";
 import type { GmailMessageSummary } from "@/lib/gmail";
 import type { RiskFlag } from "@/lib/ai";
+import {
+  AttentionCard,
+  AttentionSkeleton,
+  Centered,
+  CompactRow,
+  InboxSkeleton,
+  SectionLabel,
+  SignInPrompt,
+} from "@/components/inbox";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -60,8 +69,38 @@ export default function Home() {
       .finally(() => setAnalyzing(false));
   }
 
+  // Split the inbox by what actually needs the planner: flagged mail gets a
+  // full card, everything else collapses to one scannable line.
+  const { attention, rest } = useMemo(() => {
+    const all = messages ?? [];
+    const rank: Record<string, number> = { high: 0, medium: 1 };
+
+    const attention = all
+      .filter((m) => {
+        const risk = riskFlags[m.id]?.risk;
+        return risk === "high" || risk === "medium";
+      })
+      .sort((a, b) => {
+        const byRisk = rank[riskFlags[a.id].risk] - rank[riskFlags[b.id].risk];
+        if (byRisk !== 0) return byRisk;
+        return +new Date(b.date) - +new Date(a.date);
+      });
+
+    const flagged = new Set(attention.map((m) => m.id));
+    return { attention, rest: all.filter((m) => !flagged.has(m.id)) };
+  }, [messages, riskFlags]);
+
   if (status === "loading") {
-    return <Centered>Loading…</Centered>;
+    return <Centered>{null}</Centered>;
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <SignInPrompt
+        body="Connect your Gmail and Sparks AI will flag the messages that need you first — date changes, payment reminders, anything urgent."
+        cta="Connect Google account"
+      />
+    );
   }
 
   // Google access lapsed and couldn't be renewed silently — most likely the
@@ -69,127 +108,109 @@ export default function Home() {
   // still in "Testing"). Ask for a fresh grant rather than showing an error.
   if (needsReauth) {
     return (
-      <Centered>
-        <div className="max-w-sm text-center space-y-6 px-6">
-          <h1 className="font-serif text-3xl text-stone-800">Sparks AI</h1>
-          <p className="text-stone-500 text-sm leading-relaxed">
-            Your Google access has expired. Reconnect to keep reading your
-            wedding inbox.
-          </p>
-          <button
-            onClick={() => signIn("google")}
-            className="w-full rounded-full bg-stone-800 text-white py-3 text-sm tracking-wide hover:bg-stone-700 transition-colors"
-          >
-            Reconnect Google account
-          </button>
-        </div>
-      </Centered>
-    );
-  }
-
-  if (status !== "authenticated") {
-    return (
-      <Centered>
-        <div className="max-w-sm text-center space-y-6 px-6">
-          <h1 className="font-serif text-3xl text-stone-800">Sparks AI</h1>
-          <p className="text-stone-500 text-sm leading-relaxed">
-            Connect your Gmail to see a live view of your wedding inbox —
-            nothing is stored, this reads straight from your account.
-          </p>
-          <button
-            onClick={() => signIn("google")}
-            className="w-full rounded-full bg-stone-800 text-white py-3 text-sm tracking-wide hover:bg-stone-700 transition-colors"
-          >
-            Connect Google account
-          </button>
-        </div>
-      </Centered>
+      <SignInPrompt
+        body="Your Google access has expired. Reconnect to keep reading your wedding inbox."
+        cta="Reconnect Google account"
+      />
     );
   }
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="max-w-2xl mx-auto">
-        <header className="flex items-start justify-between mb-10">
-          <div>
-            <h1 className="font-serif text-2xl text-stone-800">Sparks AI</h1>
-            <p className="text-xs text-stone-400 mt-1">
-              Signed in as {session?.user?.email}
-            </p>
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+          <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
+            Sparks AI
+          </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="hidden truncate text-xs text-neutral-400 sm:block">
+              {session?.user?.email}
+            </span>
+            <button
+              onClick={() => signOut()}
+              className="shrink-0 rounded-md px-2 py-1 text-xs text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            >
+              Sign out
+            </button>
           </div>
-          <button
-            onClick={() => signOut()}
-            className="text-xs text-stone-400 hover:text-stone-700 underline underline-offset-2"
-          >
-            Sign out
-          </button>
-        </header>
+        </div>
+      </header>
 
-        {loading && (
-          <p className="text-stone-400 text-sm">Loading your inbox…</p>
-        )}
-        {analyzing && (
-          <p className="text-stone-400 text-sm">
-            Checking for anything that needs your attention…
+      <main className="mx-auto max-w-3xl px-4 pb-20 pt-6 sm:px-6 sm:pt-8">
+        {loading && <InboxSkeleton />}
+
+        {error && (
+          <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </p>
         )}
-        {error && <p className="text-red-500 text-sm">{error}</p>}
 
         {messages && messages.length === 0 && (
-          <p className="text-stone-400 text-sm">Your inbox is empty.</p>
+          <p className="py-16 text-center text-sm text-neutral-400">
+            Your inbox is empty.
+          </p>
         )}
 
         {messages && messages.length > 0 && (
-          <ul className="divide-y divide-stone-200 border-t border-b border-stone-200">
-            {messages.map((m) => {
-              const flag = riskFlags[m.id];
-              return (
-                <li key={m.id} className="py-4">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <p className="text-sm font-medium text-stone-800 truncate flex items-center gap-2">
-                      {flag && flag.risk !== "low" && (
-                        <span
-                          className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                            flag.risk === "high" ? "bg-red-500" : "bg-amber-500"
-                          }`}
-                          title={flag.reason}
-                        />
-                      )}
-                      {m.subject}
-                    </p>
-                    <p className="text-xs text-stone-400 shrink-0 whitespace-nowrap">
-                      {m.date}
-                    </p>
-                  </div>
-                  <p className="text-xs text-stone-500 mt-1 truncate">
-                    {m.from}
-                  </p>
-                  <p className="text-sm text-stone-600 mt-2 line-clamp-2">
-                    {m.snippet}
-                  </p>
-                  {flag && flag.risk !== "low" && (
-                    <p
-                      className={`text-xs mt-2 ${
-                        flag.risk === "high" ? "text-red-600" : "text-amber-600"
-                      }`}
-                    >
-                      {flag.reason}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </main>
-  );
-}
+          <>
+            <p className="text-[13px] text-neutral-500">
+              {analyzing ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400" />
+                  Checking {messages.length} messages…
+                </span>
+              ) : (
+                <>
+                  <span className="font-medium text-neutral-900">
+                    {attention.length}
+                  </span>
+                  {attention.length === 1 ? " needs" : " need"} attention
+                  <span className="mx-1.5 text-neutral-300">·</span>
+                  {rest.length} other{rest.length === 1 ? "" : "s"}
+                </>
+              )}
+            </p>
 
-function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      {children}
+            {analyzing && <AttentionSkeleton />}
+
+            {!analyzing && attention.length > 0 && (
+              <section className="mt-6">
+                <SectionLabel>Needs attention</SectionLabel>
+                <ul className="mt-3 space-y-2.5">
+                  {attention.map((m) => (
+                    <AttentionCard
+                      key={m.id}
+                      message={m}
+                      flag={riskFlags[m.id]}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {!analyzing && attention.length === 0 && (
+              <p className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50/60 px-4 py-6 text-center text-[13px] text-neutral-500">
+                Nothing needs your attention right now.
+              </p>
+            )}
+
+            {rest.length > 0 && (
+              <section className="mt-10">
+                <SectionLabel>
+                  {attention.length > 0 || analyzing
+                    ? "Everything else"
+                    : "Recent"}
+                </SectionLabel>
+                <ul className="mt-1 divide-y divide-neutral-100">
+                  {rest.map((m) => (
+                    <CompactRow key={m.id} message={m} />
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }

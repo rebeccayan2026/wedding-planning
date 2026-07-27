@@ -1,9 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* System font stack on purpose: it renders as the native UI font on each OS
+   (SF on macOS/iOS, Segoe on Windows), which is what gives this the "built
+   tool" feel — and unlike a webfont from fonts.googleapis.com it actually
+   loads for users in mainland China. */
 html {
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
