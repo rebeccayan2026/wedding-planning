@@ -76,3 +76,22 @@ export function exactTime(raw: string): string {
   const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? raw : date.toLocaleString();
 }
+
+/** Today, in the reader's own locale — this is a daily briefing, so say the day. */
+export function todayLabel(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+/**
+ * Deep link straight to the message in Gmail. The account slot takes an email
+ * address, not just the usual `/u/0`, so this lands in the right mailbox even
+ * when several Google accounts are signed in.
+ */
+export function gmailUrl(account: string | null | undefined, id: string): string {
+  const slot = account ? encodeURIComponent(account) : "0";
+  return `https://mail.google.com/mail/u/${slot}/#inbox/${id}`;
+}

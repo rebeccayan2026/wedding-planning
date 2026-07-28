@@ -3,7 +3,12 @@
 import { signIn } from "next-auth/react";
 import type { GmailMessageSummary } from "@/lib/gmail";
 import type { Insight } from "@/lib/ai";
-import { senderName, relativeTime, exactTime } from "@/lib/format";
+import {
+  senderName,
+  relativeTime,
+  exactTime,
+  gmailUrl,
+} from "@/lib/format";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -35,64 +40,104 @@ function UrgencyChip({ insight }: { insight: Insight }) {
   );
 }
 
+/**
+ * `urgent` items get card chrome; `soon` items stay flat. Colour alone was
+ * doing all the work of separating the two, which read as one long list.
+ */
 export function AttentionCard({
   message,
   insight,
+  tone,
+  account,
 }: {
   message: GmailMessageSummary;
   insight: Insight;
+  tone: "urgent" | "soon";
+  account?: string | null;
 }) {
+  const urgent = tone === "urgent";
+
   return (
-    <li className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-card sm:p-4">
-      <div className="flex items-center gap-2">
-        <UrgencyChip insight={insight} />
-        <span className="min-w-0 truncate text-[13px] text-neutral-600">
-          {senderName(message.from)}
-        </span>
-        <time
-          className="ml-auto shrink-0 text-xs text-neutral-400"
-          title={exactTime(message.date)}
+    <li>
+      <a
+        href={gmailUrl(account, message.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={
+          urgent
+            ? "block rounded-lg border border-neutral-200 bg-white p-3.5 shadow-card transition-colors hover:border-neutral-300 hover:bg-neutral-50/60 sm:p-4"
+            : "block rounded-md px-2 py-3 transition-colors hover:bg-neutral-50"
+        }
+      >
+        <div className="flex items-center gap-2">
+          <UrgencyChip insight={insight} />
+          <span className="min-w-0 truncate text-[13px] text-neutral-500">
+            {senderName(message.from)}
+          </span>
+          <time
+            className="ml-auto shrink-0 text-xs text-neutral-400"
+            title={exactTime(message.date)}
+          >
+            {relativeTime(message.date)}
+          </time>
+        </div>
+
+        {/* The action leads, not the subject — the point is what to do next. */}
+        <p
+          className={
+            urgent
+              ? "mt-2 text-[17px] font-semibold leading-snug tracking-[-0.011em] text-neutral-900"
+              : "mt-2 text-[15px] font-medium leading-snug text-neutral-900"
+          }
         >
-          {relativeTime(message.date)}
-        </time>
-      </div>
-
-      {/* The action leads, not the subject — the point is what to do next. */}
-      <p className="mt-2 text-[15px] font-medium leading-snug text-neutral-900">
-        {insight.action || message.subject}
-      </p>
-
-      {insight.action && (
-        <p className="mt-1 truncate text-xs text-neutral-400">
-          {message.subject}
+          {insight.action || message.subject}
         </p>
-      )}
+
+        {insight.action && (
+          <p className="mt-1 truncate text-xs text-neutral-400">
+            {message.subject}
+          </p>
+        )}
+      </a>
     </li>
   );
 }
 
-export function CompactRow({ message }: { message: GmailMessageSummary }) {
+export function CompactRow({
+  message,
+  account,
+}: {
+  message: GmailMessageSummary;
+  account?: string | null;
+}) {
   return (
-    <li className="py-2.5">
-      <div className="flex items-baseline gap-3">
-        {/* Sender gets its own column on wide screens; on phones it drops to
-            a second line so the subject keeps the full width. */}
-        <span className="hidden w-40 shrink-0 truncate text-[13px] text-neutral-500 sm:block">
+    <li>
+      <a
+        href={gmailUrl(account, message.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block rounded-md px-2 py-2.5 transition-colors hover:bg-neutral-50"
+      >
+        <div className="flex items-baseline gap-3">
+          {/* Sender gets its own column on wide screens; on phones it drops to
+              a second line so the subject keeps the full width. */}
+          <span className="hidden w-40 shrink-0 truncate text-[13px] text-neutral-500 sm:block">
+            {senderName(message.from)}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-800">
+            {message.subject}
+          </span>
+          <time
+            className="shrink-0 text-xs text-neutral-400"
+            title={exactTime(message.date)}
+          >
+            {relativeTime(message.date)}
+          </time>
+        </div>
+        <p className="mt-0.5 truncate text-xs text-neutral-400 sm:hidden">
           {senderName(message.from)}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-800">
-          {message.subject}
-        </span>
-        <time
-          className="shrink-0 text-xs text-neutral-400"
-          title={exactTime(message.date)}
-        >
-          {relativeTime(message.date)}
-        </time>
-      </div>
-      <p className="mt-0.5 truncate text-xs text-neutral-400 sm:hidden">
-        {senderName(message.from)}
-      </p>
+        </p>
+      </a>
     </li>
   );
 }
@@ -100,7 +145,8 @@ export function CompactRow({ message }: { message: GmailMessageSummary }) {
 export function InboxSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-3.5 w-40 rounded bg-neutral-100" />
+      <div className="h-4 w-44 rounded bg-neutral-100" />
+      <div className="mt-2 h-3.5 w-32 rounded bg-neutral-100" />
       <div className="mt-6 space-y-2.5">
         {[0, 1].map((i) => (
           <div
@@ -108,7 +154,7 @@ export function InboxSkeleton() {
             className="rounded-lg border border-neutral-200 p-4 shadow-card"
           >
             <div className="h-3 w-32 rounded bg-neutral-100" />
-            <div className="mt-3 h-3.5 w-3/4 rounded bg-neutral-100" />
+            <div className="mt-3 h-4 w-3/4 rounded bg-neutral-100" />
             <div className="mt-2 h-3 w-1/2 rounded bg-neutral-100" />
           </div>
         ))}
@@ -128,9 +174,24 @@ export function AttentionSkeleton() {
           className="rounded-lg border border-neutral-200 p-4 shadow-card"
         >
           <div className="h-3 w-28 rounded bg-neutral-100" />
-          <div className="mt-3 h-3.5 w-2/3 rounded bg-neutral-100" />
+          <div className="mt-3 h-4 w-2/3 rounded bg-neutral-100" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Shown when the triage ran and genuinely found nothing — the count matters,
+ *  otherwise this is indistinguishable from the analysis never having run. */
+export function AllClear({ checked }: { checked: number }) {
+  return (
+    <div className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50/60 px-4 py-8 text-center">
+      <p className="text-sm font-medium text-neutral-700">
+        Nothing needs you today.
+      </p>
+      <p className="mt-1 text-xs text-neutral-500">
+        Checked {checked} message{checked === 1 ? "" : "s"}.
+      </p>
     </div>
   );
 }

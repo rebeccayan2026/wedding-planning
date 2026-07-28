@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GmailMessageSummary } from "@/lib/gmail";
 import type { Insight } from "@/lib/ai";
 import {
+  AllClear,
   AttentionCard,
   AttentionSkeleton,
   Centered,
@@ -13,6 +14,7 @@ import {
   SectionLabel,
   SignInPrompt,
 } from "@/components/inbox";
+import { todayLabel } from "@/lib/format";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -187,13 +189,20 @@ export default function Home() {
                 </div>
                 <ul className="mt-4 divide-y divide-neutral-100">
                   {messages.map((m) => (
-                    <CompactRow key={m.id} message={m} />
+                    <CompactRow
+                            key={m.id}
+                            message={m}
+                            account={session?.user?.email}
+                          />
                   ))}
                 </ul>
               </>
             ) : (
               <>
-                <p className="text-[13px] text-neutral-500">
+                <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+                  {todayLabel()}
+                </h1>
+                <p className="mt-1 text-[13px] text-neutral-500">
                   {urgent.length > 0 && (
                     <span className="font-medium text-red-700">
                       {urgent.length} urgent
@@ -224,6 +233,8 @@ export default function Home() {
                               key={m.id}
                               message={m}
                               insight={insights[m.id]}
+                              tone="urgent"
+                              account={session?.user?.email}
                             />
                           ))}
                         </ul>
@@ -233,12 +244,14 @@ export default function Home() {
                     {soon.length > 0 && (
                       <div>
                         <SectionLabel>Before the week is out</SectionLabel>
-                        <ul className="mt-3 space-y-2.5">
+                        <ul className="mt-2 divide-y divide-neutral-100">
                           {soon.map((m) => (
                             <AttentionCard
                               key={m.id}
                               message={m}
                               insight={insights[m.id]}
+                              tone="soon"
+                              account={session?.user?.email}
                             />
                           ))}
                         </ul>
@@ -248,9 +261,7 @@ export default function Home() {
                 )}
 
                 {needsAttention === 0 && (
-                  <p className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50/60 px-4 py-6 text-center text-[13px] text-neutral-500">
-                    Nothing needs your attention right now.
-                  </p>
+                  <AllClear checked={messages.length} />
                 )}
 
                 {rest.length > 0 && (
@@ -270,7 +281,11 @@ export default function Home() {
                     {showRest && (
                       <ul className="mt-1 divide-y divide-neutral-100">
                         {rest.map((m) => (
-                          <CompactRow key={m.id} message={m} />
+                          <CompactRow
+                            key={m.id}
+                            message={m}
+                            account={session?.user?.email}
+                          />
                         ))}
                       </ul>
                     )}
