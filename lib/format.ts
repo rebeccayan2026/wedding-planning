@@ -87,11 +87,22 @@ export function todayLabel(): string {
 }
 
 /**
- * Deep link straight to the message in Gmail. The account slot takes an email
- * address, not just the usual `/u/0`, so this lands in the right mailbox even
- * when several Google accounts are signed in.
+ * Deep link straight to the conversation in Gmail.
+ *
+ * Routing is done with `?authuser=<email>` rather than the `/u/<n>/` index,
+ * because that index depends on the order accounts were signed into the
+ * browser — `/u/0/` opens whichever mailbox happens to be first, which is
+ * the wrong one whenever the planner is signed into more than one Google
+ * account. The address is written literally: putting it in the `/u/` slot
+ * (encoded or not) 404s.
+ *
+ * Takes a thread id, not a message id — Gmail's UI addresses conversations,
+ * so a message id only resolves for threads that have a single message.
  */
-export function gmailUrl(account: string | null | undefined, id: string): string {
-  const slot = account ? encodeURIComponent(account) : "0";
-  return `https://mail.google.com/mail/u/${slot}/#inbox/${id}`;
+export function gmailUrl(
+  account: string | null | undefined,
+  threadId: string
+): string {
+  const routing = account ? `?authuser=${account}` : "";
+  return `https://mail.google.com/mail/${routing}#inbox/${threadId}`;
 }

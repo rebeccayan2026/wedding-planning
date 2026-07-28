@@ -1,5 +1,7 @@
 export interface GmailMessageSummary {
   id: string;
+  /** Gmail's web UI addresses conversations, not messages — deep links need this. */
+  threadId: string;
   subject: string;
   from: string;
   date: string;
@@ -66,6 +68,7 @@ async function fetchMessageSummary(
 
   return {
     id,
+    threadId: data.threadId ?? id,
     subject: getHeader("Subject") || "(no subject)",
     from: getHeader("From"),
     date: getHeader("Date"),

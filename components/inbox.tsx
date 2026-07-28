@@ -60,7 +60,7 @@ export function AttentionCard({
   return (
     <li>
       <a
-        href={gmailUrl(account, message.id)}
+        href={gmailUrl(account, message.threadId)}
         target="_blank"
         rel="noopener noreferrer"
         className={
@@ -113,7 +113,7 @@ export function CompactRow({
   return (
     <li>
       <a
-        href={gmailUrl(account, message.id)}
+        href={gmailUrl(account, message.threadId)}
         target="_blank"
         rel="noopener noreferrer"
         className="block rounded-md px-2 py-2.5 transition-colors hover:bg-neutral-50"
