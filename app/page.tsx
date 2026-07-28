@@ -21,6 +21,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<Record<string, Insight>>({});
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
   const [showRest, setShowRest] = useState(false);
 
@@ -50,6 +51,7 @@ export default function Home() {
     if (messages.length === 0) return;
 
     setAnalyzing(true);
+    setAnalysisError(false);
 
     fetch("/api/analyze", {
       method: "POST",
@@ -64,9 +66,13 @@ export default function Home() {
             byId[insight.id] = insight;
           }
           setInsights(byId);
+        } else {
+          // Swallowing this used to render as a confident "nothing needs your
+          // attention", which is the most dangerous thing this app can say.
+          setAnalysisError(true);
         }
       })
-      .catch(() => {})
+      .catch(() => setAnalysisError(true))
       .finally(() => setAnalyzing(false));
   }
 
@@ -167,6 +173,23 @@ export default function Home() {
                   Working out what needs you…
                 </p>
                 <AttentionSkeleton />
+              </>
+            ) : analysisError ? (
+              <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-[13px] font-medium text-amber-900">
+                    Couldn&apos;t sort your inbox just now.
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                    Everything is listed below unsorted — treat it as
+                    unchecked, not as &ldquo;nothing urgent&rdquo;.
+                  </p>
+                </div>
+                <ul className="mt-4 divide-y divide-neutral-100">
+                  {messages.map((m) => (
+                    <CompactRow key={m.id} message={m} />
+                  ))}
+                </ul>
               </>
             ) : (
               <>
