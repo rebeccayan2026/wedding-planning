@@ -131,19 +131,17 @@ export default function Home() {
   const needsAttention = urgent.length + soon.length;
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur">
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-10 border-b border-stone-200 bg-[#FCFCFA]/85 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
-          <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
-            Sparks AI
-          </span>
+          <span className="font-display text-[17px] text-stone-900">Sparks AI</span>
           <div className="flex min-w-0 items-center gap-3">
-            <span className="hidden truncate text-xs text-neutral-400 sm:block">
+            <span className="hidden truncate text-xs text-stone-500 sm:block">
               {session?.user?.email}
             </span>
             <button
               onClick={() => signOut()}
-              className="shrink-0 rounded-md px-2 py-1 text-xs text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+              className="shrink-0 rounded-md px-2 py-1 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
             >
               Sign out
             </button>
@@ -155,13 +153,13 @@ export default function Home() {
         {loading && <InboxSkeleton />}
 
         {error && (
-          <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="rounded-lg border border-clay-100 bg-clay-50 px-4 py-3 text-sm text-clay-700">
             {error}
           </p>
         )}
 
         {messages && messages.length === 0 && (
-          <p className="py-16 text-center text-sm text-neutral-400">
+          <p className="py-16 text-center text-sm text-stone-500">
             Your inbox is empty.
           </p>
         )}
@@ -170,24 +168,24 @@ export default function Home() {
           <>
             {analyzing ? (
               <>
-                <p className="inline-flex items-center gap-2 text-[13px] text-neutral-500">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400" />
+                <p className="inline-flex items-center gap-2 text-[13px] text-stone-500">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sage-500" />
                   Working out what needs you…
                 </p>
                 <AttentionSkeleton />
               </>
             ) : analysisError ? (
               <>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-[13px] font-medium text-amber-900">
+                <div className="rounded-lg border border-ochre-100 bg-ochre-50 px-4 py-3">
+                  <p className="text-[13px] font-medium text-ochre-700">
                     Couldn&apos;t sort your inbox just now.
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                  <p className="mt-1 text-xs leading-relaxed text-ochre-700">
                     Everything is listed below unsorted — treat it as
                     unchecked, not as &ldquo;nothing urgent&rdquo;.
                   </p>
                 </div>
-                <ul className="mt-4 divide-y divide-neutral-100">
+                <ul className="mt-4 divide-y divide-stone-100">
                   {messages.map((m) => (
                     <CompactRow
                             key={m.id}
@@ -199,25 +197,25 @@ export default function Home() {
               </>
             ) : (
               <>
-                <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+                <h1 className="font-display text-[26px] leading-tight text-stone-900">
                   {todayLabel()}
                 </h1>
-                <p className="mt-1 text-[13px] text-neutral-500">
+                <p className="mt-1 text-[13px] text-stone-500">
                   {urgent.length > 0 && (
-                    <span className="font-medium text-red-700">
+                    <span className="font-medium text-clay-700">
                       {urgent.length} urgent
                     </span>
                   )}
                   {urgent.length > 0 && soon.length > 0 && (
-                    <span className="mx-1.5 text-neutral-300">·</span>
+                    <span className="mx-1.5 text-stone-300">·</span>
                   )}
                   {soon.length > 0 && (
-                    <span className="text-neutral-700">
+                    <span className="text-stone-700">
                       {soon.length} this week
                     </span>
                   )}
                   {needsAttention > 0 && (
-                    <span className="mx-1.5 text-neutral-300">·</span>
+                    <span className="mx-1.5 text-stone-300">·</span>
                   )}
                   {rest.length} other{rest.length === 1 ? "" : "s"}
                 </p>
@@ -244,7 +242,7 @@ export default function Home() {
                     {soon.length > 0 && (
                       <div>
                         <SectionLabel>Before the week is out</SectionLabel>
-                        <ul className="mt-2 divide-y divide-neutral-100">
+                        <ul className="mt-2 divide-y divide-stone-100">
                           {soon.map((m) => (
                             <AttentionCard
                               key={m.id}
@@ -273,13 +271,13 @@ export default function Home() {
                       <SectionLabel>
                         Everything else ({rest.length})
                       </SectionLabel>
-                      <span className="text-[11px] text-neutral-400">
+                      <span className="text-[11px] text-stone-500">
                         {showRest ? "Hide" : "Show"}
                       </span>
                     </button>
 
                     {showRest && (
-                      <ul className="mt-1 divide-y divide-neutral-100">
+                      <ul className="mt-1 divide-y divide-stone-100">
                         {rest.map((m) => (
                           <CompactRow
                             key={m.id}
@@ -293,7 +291,7 @@ export default function Home() {
                 )}
 
                 {filteredAds > 0 && (
-                  <p className="mt-6 text-xs text-neutral-400">
+                  <p className="mt-6 text-xs text-stone-500">
                     {filteredAds} promotional message
                     {filteredAds === 1 ? "" : "s"} hidden.
                   </p>
